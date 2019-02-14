@@ -28,6 +28,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import frc.robot.SubSystems.Chassis;
 import frc.robot.SubSystems.PID_Controller;
 
+@SuppressWarnings("deprecation")
+
 public class Robot extends SampleRobot implements PIDOutput {
 
     // Motors
@@ -56,7 +58,7 @@ public class Robot extends SampleRobot implements PIDOutput {
     // Driver Station Miscellaneous
     private final Joystick stick = new Joystick(0);
     private final Joystick pad = new Joystick(1);
-    private final SendableChooser<String> m_chooser = new SendableChooser<>();
+    private final SendableChooser<String> Prog = new SendableChooser<>();
 
     double pi = 3.14159265358979323846264338328;
     double orienter_output; // The output value of the GyroPID on the Chassis
@@ -100,6 +102,11 @@ public class Robot extends SampleRobot implements PIDOutput {
         Clipper.set(false);
         Pusher.set(false);
         Backup.set(false);
+
+        // TODO: Temporary Prog Chooser
+        Prog.addDefault("Prog 1", "1");
+        Prog.addDefault("Prog 2", "2");
+        Prog.addDefault("Prog 3", "3");
 
         stopAllMotors();
 
@@ -285,6 +292,7 @@ public class Robot extends SampleRobot implements PIDOutput {
                 }
             }
 
+            orient_controller.close();
             System.out.println("Yaw:" + AHRSSensor.getYaw() + "   Arm:" + Arm.getSelectedSensorPosition());
             Timer.delay(0.005);
 

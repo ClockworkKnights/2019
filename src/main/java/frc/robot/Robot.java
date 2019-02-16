@@ -13,6 +13,12 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 import com.kauailabs.navx.frc.AHRS;
 
+import org.opencv.core.Mat;
+
+import edu.wpi.cscore.CvSink;
+import edu.wpi.cscore.CvSource;
+import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DigitalInput;
@@ -116,6 +122,28 @@ public class Robot extends SampleRobot implements PIDOutput {
         Prog.addDefault("Prog 1", "1");
         Prog.addDefault("Prog 2", "2");
         Prog.addDefault("Prog 3", "3");
+
+        // Vision Thread
+        Thread visionThread = new Thread(() -> {
+            UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+            camera.setResolution(640, 480);
+            CvSink cvSink = CameraServer.getInstance().getVideo();
+            CvSource outputStream = CameraServer.getInstance().putVideo("Main Camera", 640, 480);
+            Mat mat = new Mat();
+            while (!Thread.interrupted()) {
+                if (cvSink.grabFrame(mat) == 0) {
+                    outputStream.notifyError(cvSink.getError());
+                    continue;
+                }
+                // Put a rectangle on the image
+                // Imgproc.rectangle(mat, new Point(100, 100), new Point(400, 400), new
+                // Scalar(255, 255, 255), 5);
+                // Give the output stream a new image to display
+                outputStream.putFrame(mat);
+            }
+        });
+        visionThread.setDaemon(true);
+        visionThread.start();
 
         stopAllMotors();
 

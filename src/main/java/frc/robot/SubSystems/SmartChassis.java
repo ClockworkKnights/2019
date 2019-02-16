@@ -51,7 +51,9 @@ public class SmartChassis implements PIDOutput {
         move_controller.target_value = Chas.LF.getSelectedSensorPosition() + tick;
         while (true) {
             move_controller.PIDUpdate_pos(Chas.LF.getSelectedSensorPosition());
-            Chas.omnimotion(speedlimit(move_controller.result, 0.3), speedlimit(PID_Result, 0.3), 0);
+            // Chas.omnimotion(speedlimit(move_controller.result, maxspeed),
+            // speedlimit(PID_Result, maxspeed), 0); TODO
+            System.out.println("F:" + speedlimit(move_controller.result, 0.3) + "T:" + speedlimit(PID_Result, 0.3));
             if (Math.abs(move_controller.error) < 3 * move_controller.error_tolerance
                     && move_controller.derivative <= 500)
                 break;
@@ -69,7 +71,8 @@ public class SmartChassis implements PIDOutput {
         move_controller.target_value = Gyro.getYaw() + angle;
         while (true) {
             move_controller.PIDUpdate_pos(Chas.LF.getSelectedSensorPosition());
-            Chas.turn(speedlimit(move_controller.result, 0.3));
+            // Chas.turn(speedlimit(move_controller.result, maxspeed));
+            System.out.println("T:" + speedlimit(move_controller.result, maxspeed));
             if (Math.abs(move_controller.error) < 3 * move_controller.error_tolerance
                     && move_controller.derivative <= 0.5)
                 break;

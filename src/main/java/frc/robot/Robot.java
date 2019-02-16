@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import frc.robot.SubSystems.Chassis;
 import frc.robot.SubSystems.PID_Controller;
 import frc.robot.SubSystems.SafetyArm;
+import frc.robot.SubSystems.SmartChassis;
 
 @SuppressWarnings("deprecation")
 
@@ -53,6 +54,7 @@ public class Robot extends SampleRobot implements PIDOutput {
     public static SafetyArm Arm = new SafetyArm(ArmMotor, SafetySwitchUp, SafetySwitchDown);
 
     public static Chassis Chas = new Chassis(MotorLF, MotorLB, MotorRF, MotorRB);
+    public static SmartChassis SChas = new SmartChassis(Chas, AHRSSensor);
 
     // Cylinders
     public static Compressor Comp = new Compressor(10);
@@ -121,17 +123,7 @@ public class Robot extends SampleRobot implements PIDOutput {
 
     @Override
     public void autonomous() {
-        int autoSelected = 0;
-
-        switch (autoSelected) {
-        case 0:
-
-            break;
-        case 1:
-        default:
-
-            break;
-        }
+        SChas.GoStraight(500, 0.3);
     }
 
     @Override
@@ -267,40 +259,40 @@ public class Robot extends SampleRobot implements PIDOutput {
                 }
             }
 
-            // Elevator
-            {
-                // Forward
-                if (stick.getPOV() == 0) {
-                    LifterL.set(ControlMode.PercentOutput, 1);
-                    LifterR.set(ControlMode.PercentOutput, 1);
-                    use_correction = false; // Don't move while
-                }
-                // Backward
-                else if (stick.getPOV() == 180) {
-                    LifterL.set(ControlMode.PercentOutput, -0.5);
-                    LifterR.set(ControlMode.PercentOutput, -0.5);
-                    use_correction = false;
-                }
-                // Stop
-                else {
-                    LifterL.set(ControlMode.PercentOutput, 0);
-                    LifterR.set(ControlMode.PercentOutput, 0);
-                }
-                // Manually reopen the orient-correction
-                if (stick.getPOV() == 270) {
-                    use_correction = true;
-                }
-                // Put down the arm, ENTER AN INDIVIDUAL MODE, press 7 to exit
-                if (stick.getRawButton(8)) {
-                    while (!stick.getRawButton(7))
-                        if (stick.getRawButton(8)) {
-                            Arm.Set(0.001);
-                        } else {
-                            Arm.Set(0);
-                        }
-                    arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
-                }
-            }
+            // // Elevator
+            // {
+            // // Forward
+            // if (stick.getPOV() == 90) {
+            // LifterL.set(ControlMode.PercentOutput, 1);
+            // LifterR.set(ControlMode.PercentOutput, 1);
+            // use_correction = false; // Don't move while
+            // }
+            // // Backward
+            // else if (stick.getPOV() == 180) {
+            // LifterL.set(ControlMode.PercentOutput, -0.5);
+            // LifterR.set(ControlMode.PercentOutput, -0.5);
+            // use_correction = false;
+            // }
+            // // Stop
+            // else {
+            // LifterL.set(ControlMode.PercentOutput, 0);
+            // LifterR.set(ControlMode.PercentOutput, 0);
+            // }
+            // // Manually reopen the orient-correction
+            // if (stick.getPOV() == 270) {
+            // use_correction = true;
+            // }
+            // // Put down the arm, ENTER AN INDIVIDUAL MODE, press 7 to exit
+            // if (stick.getRawButton(8)) {
+            // while (!stick.getRawButton(7))
+            // if (stick.getRawButton(8)) {
+            // Arm.Set(0.001);
+            // } else {
+            // Arm.Set(0);
+            // }
+            // arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
+            // }
+            // }
 
             System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
                     + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
@@ -355,6 +347,8 @@ public class Robot extends SampleRobot implements PIDOutput {
             System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
                     + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
                     + MotorLF.getSelectedSensorPosition());
+            LifterL.set(ControlMode.PercentOutput, -stick.getRawAxis(1));
+            LifterR.set(ControlMode.PercentOutput, -stick.getRawAxis(1));
             Timer.delay(0.005);
         }
     }

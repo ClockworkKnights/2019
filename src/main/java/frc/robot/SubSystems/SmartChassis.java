@@ -36,7 +36,7 @@ public class SmartChassis implements PIDOutput {
                 input = -Math.abs(limit);
             }
         }
-        return limit;
+        return input;
     }
 
     public void GoStraight(int tick, double maxspeed) {
@@ -44,18 +44,24 @@ public class SmartChassis implements PIDOutput {
         orient_controller.setAbsoluteTolerance(2);
         orient_controller.setSetpoint(Gyro.getYaw());
         orient_controller.enable();
+        Timer.delay(0.1);
+
+        System.out.println((Chas.LF.getSelectedSensorPosition() + Chas.RF.getSelectedSensorPosition()) / 2.0);
+
         PID_Controller move_controller = new PID_Controller();
-        move_controller.Kp = 0.005;
-        move_controller.Kd = 0.001;
-        move_controller.error_tolerance = 20;
-        move_controller.target_value = Chas.LF.getSelectedSensorPosition() + tick;
-        while (true) {
-            move_controller.PIDUpdate_pos(Chas.LF.getSelectedSensorPosition());
-            // Chas.omnimotion(speedlimit(move_controller.result, maxspeed),
-            // speedlimit(PID_Result, maxspeed), 0); TODO
-            System.out.println("F:" + speedlimit(move_controller.result, 0.3) + "T:" + speedlimit(PID_Result, 0.3));
-            if (Math.abs(move_controller.error) < 3 * move_controller.error_tolerance
-                    && move_controller.derivative <= 500)
+        move_controller.Kp = 0.00035;
+        move_controller.Ki = 0.00001;
+        move_controller.Kd = 0.00050;
+        move_controller.i_useful = 500;
+        move_controller.error_tolerance = 50;
+        move_controller.target_value = (Chas.LF.getSelectedSensorPosition() + Chas.RF.getSelectedSensorPosition()) / 2.0
+                + tick;
+        for (int i = 0; i < 120; i++) {
+            move_controller
+                    .PIDUpdate_pos((Chas.LF.getSelectedSensorPosition() + Chas.RF.getSelectedSensorPosition()) / 2.0);
+            Chas.omnimotion(speedlimit(move_controller.result, maxspeed),
+                    speedlimit(PID_Result, Math.min(move_controller.result, maxspeed)), 0); // TODO
+            if (Math.abs(move_controller.error) < move_controller.error_tolerance && move_controller.derivative <= 50)
                 break;
             Timer.delay(0.05);
         }
@@ -63,47 +69,60 @@ public class SmartChassis implements PIDOutput {
         orient_controller.close();
     }
 
-    public void Turn(double angle, double maxspeed) {
+    public void TurnTo(int angle, double maxspeed) {
         PID_Controller move_controller = new PID_Controller();
-        move_controller.Kp = 0.5;
-        move_controller.Kd = 0.1;
-        move_controller.error_tolerance = 1;
-        move_controller.target_value = Gyro.getYaw() + angle;
-        while (true) {
-            move_controller.PIDUpdate_pos(Chas.LF.getSelectedSensorPosition());
-            // Chas.turn(speedlimit(move_controller.result, maxspeed));
-            System.out.println("T:" + speedlimit(move_controller.result, maxspeed));
-            if (Math.abs(move_controller.error) < 3 * move_controller.error_tolerance
-                    && move_controller.derivative <= 0.5)
+        move_controller.Kp = 0.022;
+        move_controller.Ki = 0.003;
+        move_controller.Kd = 0.03;
+        move_controller.error_tolerance = 2;
+        move_controller.target_value = angle;
+        for (int i = 0; i < 90; i++) {
+            move_controller.PIDUpdate_pos(Gyro.getYaw());
+            Chas.turn(speedlimit(move_controller.result, maxspeed));
+            System.out.println("Error:" + move_controller.error + "T:" + speedlimit(move_controller.result, maxspeed));
+            if (Math.abs(move_controller.error) < move_controller.error_tolerance)
                 break;
             Timer.delay(0.05);
         }
         Chas.forward(0);
     }
 
-    public void PanStraight(double tick, double maxspeed) {
-        PIDController orient_controller = new PIDController(0.02, 0, 0, Gyro, this);
-        orient_controller.setAbsoluteTolerance(2);
-        orient_controller.setSetpoint(Gyro.getYaw());
-        orient_controller.enable();
-        PID_Controller move_controller = new PID_Controller();
-        move_controller.Kp = 0.005;
-        move_controller.Kd = 0.001;
-        move_controller.error_tolerance = 20;
-        move_controller.target_value = Chas.LF.getSelectedSensorPosition() + tick;
-        while (true) {
-            move_controller.PIDUpdate_pos(Chas.LF.getSelectedSensorPosition());
-            // Chas.omnimotion(0, speedlimit(PID_Result, maxspeed),
-            // speedlimit(move_controller.result, maxspeed)); // TODO
-            System.out.println("Pan:" + speedlimit(move_controller.result, 0.3) + "T:" + speedlimit(PID_Result, 0.3));
-            if (Math.abs(move_controller.error) < 3 * move_controller.error_tolerance
-                    && move_controller.derivative <= 500)
-                break;
-            Timer.delay(0.05);
-        }
-        Chas.forward(0);
-        orient_controller.close();
-    }
+    // public void PanStraight(double tick, double maxspeed) {
+    // PIDController orient_controller = new PIDController(0.02, 0, 0, Gyro, this);
+    // orient_controller.setAbsoluteTolerance(2);
+    // orient_controller.setSetpoint(Gyro.getYaw());
+    // orient_controller.enable();
+    // Timer.delay(0.1);
+
+    // System.out.println((Chas.LF.getSelectedSensorPosition() -
+    // Chas.RF.getSelectedSensorPosition()) / 2.0);
+
+    // PID_Controller move_controller = new PID_Controller();
+    // move_controller.Kp = 0.00035;
+    // move_controller.Ki = 0.00001;
+    // move_controller.Kd = 0.00050;
+    // move_controller.i_useful = 500;
+    // move_controller.error_tolerance = 50;
+    // move_controller.target_value = (Chas.LF.getSelectedSensorPosition() -
+    // Chas.RF.getSelectedSensorPosition()) / 2.0
+    // + tick;
+    // for (int i = 0; i < 120; i++) {
+    // move_controller
+    // .PIDUpdate_pos((Chas.LF.getSelectedSensorPosition() -
+    // Chas.RF.getSelectedSensorPosition()) / 2.0);
+    // Chas.omnimotion(0, speedlimit(PID_Result, Math.min(move_controller.result,
+    // maxspeed)),
+    // speedlimit(move_controller.result, maxspeed)); // TODO
+    // System.out.println(move_controller.error + " " +
+    // speedlimit(move_controller.result, maxspeed));
+    // if (Math.abs(move_controller.error) < move_controller.error_tolerance &&
+    // move_controller.derivative <= 50)
+    // break;
+    // Timer.delay(0.05);
+    // }
+    // Chas.forward(0);
+    // orient_controller.close();
+    // }
 
     @Override
     public void pidWrite(double output) {

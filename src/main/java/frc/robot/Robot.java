@@ -13,6 +13,12 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 import com.kauailabs.navx.frc.AHRS;
 
+import org.opencv.core.Mat;
+
+import edu.wpi.cscore.CvSink;
+import edu.wpi.cscore.CvSource;
+import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DigitalInput;
@@ -36,10 +42,10 @@ import frc.robot.SubSystems.SmartChassis;
 public class Robot extends SampleRobot implements PIDOutput {
 
     // Sensors
-    public static AnalogInput LineTracker = new AnalogInput(0);
     public static AHRS AHRSSensor = new AHRS(SerialPort.Port.kMXP);
     public static DigitalInput SafetySwitchUp = new DigitalInput(0);
     public static DigitalInput SafetySwitchDown = new DigitalInput(1);
+    public static AnalogInput IFDist = new AnalogInput(0);
 
     // Motors
     public static TalonSRX MotorLF = new TalonSRX(0);
@@ -117,13 +123,53 @@ public class Robot extends SampleRobot implements PIDOutput {
         Prog.addDefault("Prog 2", "2");
         Prog.addDefault("Prog 3", "3");
 
+        // Vision Thread
+        Thread visionThread = new Thread(() -> {
+            UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+            camera.setResolution(160, 120);
+            CvSink cvSink = CameraServer.getInstance().getVideo();
+            CvSource outputStream = CameraServer.getInstance().putVideo("Main Camera", 160, 120);
+            Mat mat = new Mat();
+            while (!Thread.interrupted()) {
+                if (cvSink.grabFrame(mat) == 0) {
+                    outputStream.notifyError(cvSink.getError());
+                    continue;
+                }
+                // Put a rectangle on the image
+                // Imgproc.rectangle(mat, new Point(100, 100), new Point(400, 400), new
+                // Scalar(255, 255, 255), 5);
+                // Give the output stream a new image to display
+                outputStream.putFrame(mat);
+            }
+        });
+        visionThread.setDaemon(true);
+        visionThread.start();
+
         stopAllMotors();
 
     }
 
     @Override
     public void autonomous() {
-        SChas.GoStraight(500, 0.3);
+
+        AHRSSensor.zeroYaw();
+        MotorLF.setSelectedSensorPosition(0);
+        Timer.delay(0.6);
+        Chas.forward(0.5);
+        Timer.delay(0.5);
+        Chas.forward(0);
+        Timer.delay(0.8);
+        Chas.forward(-0.3);
+        Timer.delay(0.6);
+        Chas.forward(0);
+        Timer.delay(0.5);
+        SChas.GoStraight(10000, 0.5);
+        SChas.TurnTo(-30, 0.5);
+        SChas.GoStraight(9000, 0.5);
+        SChas.TurnTo(0, 0.5);
+        SChas.GoStraight(10000, 0.5);
+        SChas.TurnTo(90, 0.5);
+
     }
 
     @Override
@@ -139,7 +185,7 @@ public class Robot extends SampleRobot implements PIDOutput {
         orient_controller.setSetpoint(AHRSSensor.getYaw());
         orient_controller.enable();
         boolean user_turning = false;
-        boolean use_correction = false;
+        boolean use_correction = true;
 
         PID_Controller arm_controller = new PID_Controller();
         arm_controller.Kp = 0.00005;
@@ -157,9 +203,9 @@ public class Robot extends SampleRobot implements PIDOutput {
             // Chassis Driving
             {
                 // Read Joysticks and Move Headless in a Straight way
-                forward = -stick.getRawAxis(1);
-                turn = stick.getRawAxis(4);
-                strafe = stick.getRawAxis(0);
+                forward = -stick.getRawAxis(1) * 0.5;
+                turn = stick.getRawAxis(4) * 0.5;
+                strafe = stick.getRawAxis(0) * 0.5;
                 // User wants to turn, set flag
                 if (Math.abs(turn) > 0.005)
                     user_turning = true;
@@ -299,7 +345,7 @@ public class Robot extends SampleRobot implements PIDOutput {
 
             System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
                     + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
-                    + MotorLF.getSelectedSensorPosition());
+                    + MotorLF.getSelectedSensorPosition() + "  Dist:" + (IFDist.getVoltage() - 0.11) / 12.44);
             Timer.delay(0.005);
 
         }
@@ -349,7 +395,7 @@ public class Robot extends SampleRobot implements PIDOutput {
         while (isTest() && isEnabled()) {
             System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
                     + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
-                    + MotorLF.getSelectedSensorPosition());
+                    + MotorLF.getSelectedSensorPosition() + "  Dist:" + IFDist.getVoltage());
             LifterL.set(ControlMode.PercentOutput, -stick.getRawAxis(1));
             LifterR.set(ControlMode.PercentOutput, -stick.getRawAxis(1));
             Timer.delay(0.005);

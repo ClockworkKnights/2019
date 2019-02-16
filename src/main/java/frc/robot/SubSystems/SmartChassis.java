@@ -81,6 +81,30 @@ public class SmartChassis implements PIDOutput {
         Chas.forward(0);
     }
 
+    public void PanStraight(double tick, double maxspeed) {
+        PIDController orient_controller = new PIDController(0.02, 0, 0, Gyro, this);
+        orient_controller.setAbsoluteTolerance(2);
+        orient_controller.setSetpoint(Gyro.getYaw());
+        orient_controller.enable();
+        PID_Controller move_controller = new PID_Controller();
+        move_controller.Kp = 0.005;
+        move_controller.Kd = 0.001;
+        move_controller.error_tolerance = 20;
+        move_controller.target_value = Chas.LF.getSelectedSensorPosition() + tick;
+        while (true) {
+            move_controller.PIDUpdate_pos(Chas.LF.getSelectedSensorPosition());
+            // Chas.omnimotion(0, speedlimit(PID_Result, maxspeed),
+            // speedlimit(move_controller.result, maxspeed)); // TODO
+            System.out.println("Pan:" + speedlimit(move_controller.result, 0.3) + "T:" + speedlimit(PID_Result, 0.3));
+            if (Math.abs(move_controller.error) < 3 * move_controller.error_tolerance
+                    && move_controller.derivative <= 500)
+                break;
+            Timer.delay(0.05);
+        }
+        Chas.forward(0);
+        orient_controller.close();
+    }
+
     @Override
     public void pidWrite(double output) {
         PID_Result = output;

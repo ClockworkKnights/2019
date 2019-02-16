@@ -148,6 +148,8 @@ public class Robot extends SampleRobot implements PIDOutput {
         arm_controller.error_tolerance = 20;
         arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
 
+        boolean allowLift = false;
+
         Comp.setClosedLoopControl(true);
 
         while (isOperatorControl() && isEnabled()) {
@@ -259,40 +261,41 @@ public class Robot extends SampleRobot implements PIDOutput {
                 }
             }
 
-            // // Elevator
-            // {
-            // // Forward
-            // if (stick.getPOV() == 90) {
-            // LifterL.set(ControlMode.PercentOutput, 1);
-            // LifterR.set(ControlMode.PercentOutput, 1);
-            // use_correction = false; // Don't move while
-            // }
-            // // Backward
-            // else if (stick.getPOV() == 180) {
-            // LifterL.set(ControlMode.PercentOutput, -0.5);
-            // LifterR.set(ControlMode.PercentOutput, -0.5);
-            // use_correction = false;
-            // }
-            // // Stop
-            // else {
-            // LifterL.set(ControlMode.PercentOutput, 0);
-            // LifterR.set(ControlMode.PercentOutput, 0);
-            // }
-            // // Manually reopen the orient-correction
-            // if (stick.getPOV() == 270) {
-            // use_correction = true;
-            // }
-            // // Put down the arm, ENTER AN INDIVIDUAL MODE, press 7 to exit
-            // if (stick.getRawButton(8)) {
-            // while (!stick.getRawButton(7))
-            // if (stick.getRawButton(8)) {
-            // Arm.Set(0.001);
-            // } else {
-            // Arm.Set(0);
-            // }
-            // arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
-            // }
-            // }
+            // Elevator
+            {
+                // Forward
+                if (stick.getPOV() == 90) {
+                    LifterL.set(ControlMode.PercentOutput, 1);
+                    LifterR.set(ControlMode.PercentOutput, 1);
+                    use_correction = false; // Don't move while
+                }
+                // Backward
+                else if (stick.getPOV() == 180) {
+                    LifterL.set(ControlMode.PercentOutput, -0.5);
+                    LifterR.set(ControlMode.PercentOutput, -0.5);
+                    use_correction = false;
+                    allowLift = true;
+                }
+                // Stop
+                else {
+                    LifterL.set(ControlMode.PercentOutput, 0);
+                    LifterR.set(ControlMode.PercentOutput, 0);
+                }
+                // Manually reopen the orient-correction
+                if (stick.getPOV() == 270) {
+                    use_correction = true;
+                }
+                // Put down the arm, ENTER AN INDIVIDUAL MODE, press 7 to exit
+                if (stick.getRawButton(8)) {
+                    while (!stick.getRawButton(7))
+                        if (stick.getRawButton(8)) {
+                            Arm.Set(0.001);
+                        } else {
+                            Arm.Set(0);
+                        }
+                    arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
+                }
+            }
 
             System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
                     + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"

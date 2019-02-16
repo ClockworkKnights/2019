@@ -264,7 +264,7 @@ public class Robot extends SampleRobot implements PIDOutput {
             // Elevator
             {
                 // Forward
-                if (stick.getPOV() == 90) {
+                if (stick.getPOV() == 90 && allowLift) {
                     LifterL.set(ControlMode.PercentOutput, 1);
                     LifterR.set(ControlMode.PercentOutput, 1);
                     use_correction = false; // Don't move while

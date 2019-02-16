@@ -16,10 +16,10 @@ import com.ctre.phoenix.motorcontrol.can.VictorSPX;
  */
 public class Chassis {
 
-    private TalonSRX LF;
-    private VictorSPX LB;
-    private TalonSRX RF;
-    private VictorSPX RB;
+    public TalonSRX LF;
+    public VictorSPX LB;
+    public TalonSRX RF;
+    public VictorSPX RB;
 
     public Chassis(TalonSRX _LF, VictorSPX _LB, TalonSRX _RF, VictorSPX _RB) {
         LF = _LF;

@@ -15,6 +15,7 @@ import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.Joystick;
@@ -27,22 +28,31 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import frc.robot.SubSystems.Chassis;
 import frc.robot.SubSystems.PID_Controller;
+import frc.robot.SubSystems.SafetyArm;
 
 @SuppressWarnings("deprecation")
 
 public class Robot extends SampleRobot implements PIDOutput {
+
+    // Sensors
+    public static AnalogInput LineTracker = new AnalogInput(0);
+    public static AHRS AHRSSensor = new AHRS(SerialPort.Port.kMXP);
+    public static DigitalInput SafetySwitchUp = new DigitalInput(0);
+    public static DigitalInput SafetySwitchDown = new DigitalInput(1);
 
     // Motors
     public static TalonSRX MotorLF = new TalonSRX(0);
     public static VictorSPX MotorLB = new VictorSPX(1);
     public static TalonSRX MotorRF = new TalonSRX(2);
     public static VictorSPX MotorRB = new VictorSPX(3);
-    public static VictorSPX Roller = new VictorSPX(4);
+    public static VictorSPX Roller1 = new VictorSPX(4);
+    public static VictorSPX Roller2 = new VictorSPX(8);
     public static VictorSPX LifterL = new VictorSPX(5);
     public static VictorSPX LifterR = new VictorSPX(6);
-    public static TalonSRX Arm = new TalonSRX(7);
+    public static TalonSRX ArmMotor = new TalonSRX(7);
+    public static SafetyArm Arm = new SafetyArm(ArmMotor, SafetySwitchUp, SafetySwitchDown);
 
-    private final Chassis Chas = new Chassis(MotorLF, MotorLB, MotorRF, MotorRB);
+    public static Chassis Chas = new Chassis(MotorLF, MotorLB, MotorRF, MotorRB);
 
     // Cylinders
     public static Compressor Comp = new Compressor(10);
@@ -50,10 +60,6 @@ public class Robot extends SampleRobot implements PIDOutput {
     public static Solenoid Clipper = new Solenoid(10, 1);
     public static DoubleSolenoid Expander = new DoubleSolenoid(10, 0, 4);
     public static Solenoid Backup = new Solenoid(10, 3);
-
-    // Sensors
-    public static AnalogInput LineTracker = new AnalogInput(0);
-    private final AHRS AHRSSensor = new AHRS(SerialPort.Port.kMXP);
 
     // Driver Station Miscellaneous
     private final Joystick stick = new Joystick(0);
@@ -74,27 +80,28 @@ public class Robot extends SampleRobot implements PIDOutput {
         MotorLB.configFactoryDefault();
         MotorRF.configFactoryDefault();
         MotorRB.configFactoryDefault();
-        Roller.configFactoryDefault();
+        Roller1.configFactoryDefault();
+        Roller2.configFactoryDefault();
         LifterL.configFactoryDefault();
         LifterR.configFactoryDefault();
-        Arm.configFactoryDefault();
+        ArmMotor.configFactoryDefault();
 
         // Set the Motor "Reversed"
         MotorLF.setInverted(true);
         MotorLB.setInverted(true);
         LifterR.setInverted(true);
-        Arm.setInverted(true);
+        ArmMotor.setInverted(true);
 
         // Config the MagEncoders on the Motor Controllers
         MotorLF.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
         MotorRF.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
-        Arm.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+        ArmMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
 
         // Set the Encoder "Reversed"
-        Arm.setSensorPhase(true);
+        ArmMotor.setSensorPhase(true);
 
         // Reset the sensors
-        Arm.setSelectedSensorPosition(0);
+        ArmMotor.setSelectedSensorPosition(0);
         AHRSSensor.zeroYaw();
 
         // Initialize the Cylinders
@@ -147,7 +154,7 @@ public class Robot extends SampleRobot implements PIDOutput {
         arm_controller.Ki = 0;
         arm_controller.Kd = 0;
         arm_controller.error_tolerance = 20;
-        arm_controller.target_value = -Arm.getSelectedSensorPosition();
+        arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
 
         Comp.setClosedLoopControl(true);
 
@@ -174,7 +181,8 @@ public class Robot extends SampleRobot implements PIDOutput {
                 }
                 Chas.omnimotion(forward, turn, strafe);
             }
-            // OneKey Movement
+
+            // OneKey Movement TODO: Test Onekey
             {
                 if (pad.getRawButton(1))
                     orient_controller.setSetpoint(0 + Math.round(AHRSSensor.getYaw() / 360.0) * 360.0);
@@ -213,47 +221,49 @@ public class Robot extends SampleRobot implements PIDOutput {
                 }
             }
 
-            // Arm Motion
+            // Arm Motion (Positive: Down, Negative: Up)
             {
                 // Buttons
-                if (stick.getRawAxis(2) >= 0.05 && Arm.getSelectedSensorPosition() < 195000) {
-                    Arm.set(ControlMode.PercentOutput, 0.3); // Down
-                    arm_controller.target_value = Arm.getSelectedSensorPosition();
-                } else if (stick.getRawButton(5) && Arm.getSelectedSensorPosition() > 1000) {
-                    Arm.set(ControlMode.PercentOutput, -0.4); // Up
-                    arm_controller.target_value = Arm.getSelectedSensorPosition();
-                } else { // PID Lock
-                    // Speed Limit of the PID_Controller
-                    if (arm_controller.result > 0.3)
-                        arm_controller.result = 0.3;
-                    else if (arm_controller.result < -0.3)
-                        arm_controller.result = -0.3;
-                    arm_controller.PIDUpdate_pos(Arm.getSelectedSensorPosition());
-                    Arm.set(ControlMode.PercentOutput, arm_controller.result);
+                if (stick.getRawAxis(2) >= 0.05 && ArmMotor.getSelectedSensorPosition() < 205000
+                        && !SafetySwitchDown.get()) {
+                    arm_controller.target_value = arm_controller.target_value + 900.0;
                 }
-                // Angle Limit of the PID_Controller
-                if (arm_controller.target_value > 190000)
-                    arm_controller.target_value = 190000;
-                else if (arm_controller.target_value < 1000)
-                    arm_controller.target_value = 1000;
-                // Manual GROUND KILLER
-                if (stick.getRawButton(2))
-                    arm_controller.target_value = 240000; // TODO: Use Machinery if possible
+                if (stick.getRawButton(5) && ArmMotor.getSelectedSensorPosition() > 100 && !SafetySwitchUp.get()) {
+                    arm_controller.target_value = arm_controller.target_value - 1000.0;
+                }
+
+                if (ArmMotor.getSelectedSensorPosition() < 0) {
+                    ArmMotor.setSelectedSensorPosition(0);
+                    arm_controller.target_value = 0;
+                }
+
+                // Speed Limit of the PID_Controller
+                arm_controller.PIDUpdate_pos(ArmMotor.getSelectedSensorPosition());
+                if (arm_controller.result > 0.8)
+                    arm_controller.result = 0.8;
+                else if (arm_controller.result < -0.8)
+                    arm_controller.result = -0.8;
+                Arm.Set(arm_controller.result);
             }
 
             // Ball Roller
             {
                 if (stick.getRawButton(6)) {
-                    Roller.set(ControlMode.PercentOutput, 1);
+                    Roller1.set(ControlMode.PercentOutput, 1);
+                    Roller2.set(ControlMode.PercentOutput, 1);
                 } else {
                     if (stick.getRawAxis(3) > 0.2) {
-                        Roller.set(ControlMode.PercentOutput, 0);
+                        Roller1.set(ControlMode.PercentOutput, 0);
+                        Roller2.set(ControlMode.PercentOutput, 0);
                         Timer.delay(0.2);
-                        Roller.set(ControlMode.PercentOutput, -1);
+                        Roller1.set(ControlMode.PercentOutput, -1);
+                        Roller2.set(ControlMode.PercentOutput, -1);
                         while (stick.getRawAxis(3) > 0.2) {
                         }
-                    } else if (Arm.getSelectedSensorPosition() > 10000)
-                        Roller.set(ControlMode.PercentOutput, 0.1);
+                    } else if (ArmMotor.getSelectedSensorPosition() > 28000) {
+                        Roller1.set(ControlMode.PercentOutput, 0.2);
+                        Roller2.set(ControlMode.PercentOutput, 0.2);
+                    }
                 }
             }
 
@@ -284,19 +294,21 @@ public class Robot extends SampleRobot implements PIDOutput {
                 if (stick.getRawButton(8)) {
                     while (!stick.getRawButton(7))
                         if (stick.getRawButton(8)) {
-                            Arm.set(ControlMode.PercentOutput, 0.001);
+                            Arm.Set(0.001);
                         } else {
-                            Arm.set(ControlMode.PercentOutput, 0);
+                            Arm.Set(0);
                         }
-                    arm_controller.target_value = Arm.getSelectedSensorPosition();
+                    arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
                 }
             }
 
-            orient_controller.close();
-            System.out.println("Yaw:" + AHRSSensor.getYaw() + "   Arm:" + Arm.getSelectedSensorPosition());
+            System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
+                    + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
+                    + MotorLF.getSelectedSensorPosition());
             Timer.delay(0.005);
 
         }
+        orient_controller.close();
 
         stopAllMotors();
 
@@ -309,27 +321,28 @@ public class Robot extends SampleRobot implements PIDOutput {
         MotorLB.configFactoryDefault();
         MotorRF.configFactoryDefault();
         MotorRB.configFactoryDefault();
-        Roller.configFactoryDefault();
+        Roller1.configFactoryDefault();
+        Roller2.configFactoryDefault();
         LifterL.configFactoryDefault();
         LifterR.configFactoryDefault();
-        Arm.configFactoryDefault();
+        ArmMotor.configFactoryDefault();
 
         // Set the Motor "Reversed"
         MotorLF.setInverted(true);
         MotorLB.setInverted(true);
         LifterR.setInverted(true);
-        Arm.setInverted(true);
+        ArmMotor.setInverted(true);
 
         // Config the MagEncoders on the Motor Controllers
         MotorLF.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
         MotorRF.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
-        Arm.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+        ArmMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
 
         // Set the Encoder "Reversed"
-        Arm.setSensorPhase(true);
+        ArmMotor.setSensorPhase(true);
 
         // Reset the sensors
-        Arm.setSelectedSensorPosition(0);
+        ArmMotor.setSelectedSensorPosition(0);
         AHRSSensor.zeroYaw();
 
         // Initialize the Cylinders
@@ -339,7 +352,9 @@ public class Robot extends SampleRobot implements PIDOutput {
         Backup.set(false);
 
         while (isTest() && isEnabled()) {
-            System.out.println("Yaw:" + AHRSSensor.getYaw() + "   Arm:" + Arm.getSelectedSensorPosition());
+            System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
+                    + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
+                    + MotorLF.getSelectedSensorPosition());
             Timer.delay(0.005);
         }
     }
@@ -349,10 +364,11 @@ public class Robot extends SampleRobot implements PIDOutput {
         MotorLB.set(ControlMode.PercentOutput, 0);
         MotorRF.set(ControlMode.PercentOutput, 0);
         MotorRB.set(ControlMode.PercentOutput, 0);
-        Roller.set(ControlMode.PercentOutput, 0);
+        Roller1.set(ControlMode.PercentOutput, 0);
+        Roller2.set(ControlMode.PercentOutput, 0);
         LifterL.set(ControlMode.PercentOutput, 0);
         LifterR.set(ControlMode.PercentOutput, 0);
-        Arm.set(ControlMode.PercentOutput, 0);
+        Arm.Set(0);
     }
 
     public void resetAllCylinders() {

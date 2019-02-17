@@ -268,8 +268,8 @@ public class Robot extends SampleRobot implements PIDOutput {
                         && !SafetySwitchDown.get()) {
                     arm_controller.target_value = arm_controller.target_value + 900.0;
                 }
-                if (stick.getRawButton(5) && ArmMotor.getSelectedSensorPosition() > 100 && !SafetySwitchUp.get()) {
-                    arm_controller.target_value = arm_controller.target_value - 1000.0;
+                if (stick.getRawButton(5) && ArmMotor.getSelectedSensorPosition() > 1500 && !SafetySwitchUp.get()) {
+                    arm_controller.target_value = arm_controller.target_value - 1500.0;
                 }
 
                 if (ArmMotor.getSelectedSensorPosition() < 0) {
@@ -291,19 +291,20 @@ public class Robot extends SampleRobot implements PIDOutput {
                 if (stick.getRawButton(6)) {
                     Roller1.set(ControlMode.PercentOutput, 1);
                     Roller2.set(ControlMode.PercentOutput, 1);
-                } else {
-                    if (stick.getRawAxis(3) > 0.2) {
-                        Roller1.set(ControlMode.PercentOutput, 0);
-                        Roller2.set(ControlMode.PercentOutput, 0);
-                        Timer.delay(0.2);
-                        Roller1.set(ControlMode.PercentOutput, -1);
-                        Roller2.set(ControlMode.PercentOutput, -1);
-                        while (stick.getRawAxis(3) > 0.2) {
-                        }
-                    } else if (ArmMotor.getSelectedSensorPosition() > 28000) {
-                        Roller1.set(ControlMode.PercentOutput, 0.2);
-                        Roller2.set(ControlMode.PercentOutput, 0.2);
+                } else if (stick.getRawAxis(3) > 0.2) {
+                    Roller1.set(ControlMode.PercentOutput, 0);
+                    Roller2.set(ControlMode.PercentOutput, 0);
+                    Timer.delay(0.2);
+                    Roller1.set(ControlMode.PercentOutput, -1);
+                    Roller2.set(ControlMode.PercentOutput, -1);
+                    while (stick.getRawAxis(3) > 0.2) {
                     }
+                } else if (ArmMotor.getSelectedSensorPosition() > 28000) {
+                    Roller1.set(ControlMode.PercentOutput, 0.2);
+                    Roller2.set(ControlMode.PercentOutput, 0.2);
+                } else {
+                    Roller1.set(ControlMode.PercentOutput, 0);
+                    Roller2.set(ControlMode.PercentOutput, 0);
                 }
             }
 

@@ -195,6 +195,7 @@ public class Robot extends SampleRobot implements PIDOutput {
         arm_controller.target_value = ArmMotor.getSelectedSensorPosition();
 
         boolean allowLift = false;
+        boolean RollerForce = false;
 
         Comp.setClosedLoopControl(true);
 
@@ -291,20 +292,20 @@ public class Robot extends SampleRobot implements PIDOutput {
                 if (stick.getRawButton(6)) {
                     Roller1.set(ControlMode.PercentOutput, 1);
                     Roller2.set(ControlMode.PercentOutput, 1);
+                    RollerForce = true;
                 } else if (stick.getRawAxis(3) > 0.2) {
-                    Roller1.set(ControlMode.PercentOutput, 0);
-                    Roller2.set(ControlMode.PercentOutput, 0);
-                    Timer.delay(0.2);
                     Roller1.set(ControlMode.PercentOutput, -1);
                     Roller2.set(ControlMode.PercentOutput, -1);
-                    while (stick.getRawAxis(3) > 0.2) {
-                    }
-                } else if (ArmMotor.getSelectedSensorPosition() > 28000) {
+                    RollerForce = false;
+                } else if (ArmMotor.getSelectedSensorPosition() > 28000 && RollerForce) {
                     Roller1.set(ControlMode.PercentOutput, 0.2);
                     Roller2.set(ControlMode.PercentOutput, 0.2);
                 } else {
                     Roller1.set(ControlMode.PercentOutput, 0);
                     Roller2.set(ControlMode.PercentOutput, 0);
+                }
+                if (stick.getPOV() == 0) {
+                    RollerForce = false;
                 }
             }
 

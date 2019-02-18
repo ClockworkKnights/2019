@@ -42,7 +42,7 @@ public class SmartChassis implements PIDOutput {
     public void GoStraight(int tick, double maxspeed) {
         PIDController orient_controller = new PIDController(0.02, 0, 0, Gyro, this);
         orient_controller.setAbsoluteTolerance(2);
-        orient_controller.setSetpoint(Gyro.getYaw());
+        orient_controller.setSetpoint(Gyro.getAngle());
         orient_controller.enable();
         Timer.delay(0.1);
 
@@ -77,7 +77,7 @@ public class SmartChassis implements PIDOutput {
         move_controller.error_tolerance = 2;
         move_controller.target_value = angle;
         for (int i = 0; i < 90; i++) {
-            move_controller.PIDUpdate_pos(Gyro.getYaw());
+            move_controller.PIDUpdate_pos(Gyro.getAngle());
             Chas.turn(speedlimit(move_controller.result, maxspeed));
             System.out.println("Error:" + move_controller.error + "T:" + speedlimit(move_controller.result, maxspeed));
             if (Math.abs(move_controller.error) < move_controller.error_tolerance)
@@ -90,7 +90,7 @@ public class SmartChassis implements PIDOutput {
     // public void PanStraight(double tick, double maxspeed) {
     // PIDController orient_controller = new PIDController(0.02, 0, 0, Gyro, this);
     // orient_controller.setAbsoluteTolerance(2);
-    // orient_controller.setSetpoint(Gyro.getYaw());
+    // orient_controller.setSetpoint(Gyro.getAngle());
     // orient_controller.enable();
     // Timer.delay(0.1);
 

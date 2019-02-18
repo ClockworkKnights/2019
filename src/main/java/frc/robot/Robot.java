@@ -183,7 +183,7 @@ public class Robot extends SampleRobot implements PIDOutput {
         // PIDController orient_controller = new PIDController(0.02, 0, 0, AHRSSensor,
         // this);
         // orient_controller.setAbsoluteTolerance(2);
-        // orient_controller.setSetpoint(AHRSSensor.getYaw());
+        // orient_controller.setSetpoint(AHRSSensor.getAngle());
         // orient_controller.enable();
 
         PID_Controller orient_controller = new PID_Controller();
@@ -191,10 +191,11 @@ public class Robot extends SampleRobot implements PIDOutput {
         orient_controller.Ki = 0;
         orient_controller.Kd = 0;
         orient_controller.error_tolerance = 2;
-        orient_controller.target_value = AHRSSensor.getYaw();
+        orient_controller.target_value = AHRSSensor.getAngle();
 
         boolean user_turning = false;
         boolean use_correction = true;
+        double woodplate_angle = 0;
 
         PID_Controller arm_controller = new PID_Controller();
         arm_controller.Kp = 0.00005;
@@ -213,9 +214,31 @@ public class Robot extends SampleRobot implements PIDOutput {
             // Chassis Driving
             {
                 // Read Joysticks and Move Headless in a Straight way
-                forward = -stick.getRawAxis(1) * 0.5;
-                turn = stick.getRawAxis(4) * 0.5;
-                strafe = stick.getRawAxis(0) * 0.5;
+                if (Math.abs(stick.getRawAxis(1)) <= 0.6)
+                    forward = -stick.getRawAxis(1) * 0.75;
+                else if (-stick.getRawAxis(1) > 0)
+                    forward = -stick.getRawAxis(1) / 8.0 * 11.0 - 0.375;
+                else
+                    forward = -stick.getRawAxis(1) / 8.0 * 11.0 + 0.375;
+
+                if (Math.abs(stick.getRawAxis(4)) <= 0.6)
+                    turn = stick.getRawAxis(4) * 0.75;
+                else if (stick.getRawAxis(4) > 0)
+                    turn = stick.getRawAxis(4) / 8.0 * 11.0 - 0.375;
+                else
+                    turn = stick.getRawAxis(4) / 8.0 * 11.0 + 0.375;
+
+                if (Math.abs(stick.getRawAxis(0)) <= 0.6)
+                    strafe = stick.getRawAxis(0) * 0.75;
+                else if (stick.getRawAxis(0) > 0)
+                    strafe = stick.getRawAxis(0) / 8.0 * 11.0 - 0.375;
+                else
+                    strafe = stick.getRawAxis(0) / 8.0 * 11.0 + 0.375;
+
+                forward *= 0.8;
+                turn *= 0.8;
+                strafe *= 0.9;
+
                 // User wants to turn, set flag
                 if (Math.abs(stick.getRawAxis(4)) > 0.05)
                     user_turning = true;
@@ -223,11 +246,11 @@ public class Robot extends SampleRobot implements PIDOutput {
                 else if (user_turning) {
                     user_turning = false;
                     // Record the new orient
-                    orient_controller.target_value = (AHRSSensor.getYaw());
+                    orient_controller.target_value = (AHRSSensor.getAngle());
                 }
                 // User don't want to turn, control now
                 if (!user_turning && use_correction) {
-                    orient_controller.PIDUpdate_pos(AHRSSensor.getYaw());
+                    orient_controller.PIDUpdate_pos(AHRSSensor.getAngle());
                     turn = orient_controller.result; // PID(See the pidWrite function)
                 }
                 Chas.omnimotion(forward, turn, strafe);
@@ -235,16 +258,19 @@ public class Robot extends SampleRobot implements PIDOutput {
 
             // OneKey Movement TODO: Test Onekey
             {
-                if (pad.getRawButton(1))
-                    orient_controller.target_value = (0 + Math.round(AHRSSensor.getYaw() / 360.0) * 360.0);
+                if (stick.getRawButton(2))
+                    orient_controller.target_value = (woodplate_angle
+                            + Math.round((AHRSSensor.getAngle() - woodplate_angle) / 360.0) * 360.0);
                 if (pad.getRawButton(2))
-                    orient_controller.target_value = (30 + Math.round((AHRSSensor.getYaw() - 30.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (30 + Math.round((AHRSSensor.getAngle() - 30.0) / 360.0) * 360.0);
                 if (pad.getRawButton(3))
-                    orient_controller.target_value = (90 + Math.round((AHRSSensor.getYaw() - 90.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (90 + Math.round((AHRSSensor.getAngle() - 90.0) / 360.0) * 360.0);
                 if (pad.getRawButton(4))
-                    orient_controller.target_value = (150 + Math.round((AHRSSensor.getYaw() - 150.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (150
+                            + Math.round((AHRSSensor.getAngle() - 150.0) / 360.0) * 360.0);
                 if (pad.getRawButton(5))
-                    orient_controller.target_value = (180 + Math.round((AHRSSensor.getYaw() - 180.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (180
+                            + Math.round((AHRSSensor.getAngle() - 180.0) / 360.0) * 360.0);
             }
 
             // Pusher
@@ -342,6 +368,7 @@ public class Robot extends SampleRobot implements PIDOutput {
                 // Manually reopen the orient-correction
                 if (stick.getPOV() == 270) {
                     use_correction = true;
+                    woodplate_angle = AHRSSensor.getAngle();
                 }
                 // Put down the arm, ENTER AN INDIVIDUAL MODE, press 7 to exit
                 if (stick.getRawButton(8)) {
@@ -356,7 +383,7 @@ public class Robot extends SampleRobot implements PIDOutput {
             }
 
             System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
-                    + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
+                    + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getAngle() + "   ChassisL:"
                     + MotorLF.getSelectedSensorPosition() + "  Dist:" + (IFDist.getVoltage() - 0.11) / 12.44);
             Timer.delay(0.005);
 
@@ -405,7 +432,7 @@ public class Robot extends SampleRobot implements PIDOutput {
 
         while (isTest() && isEnabled()) {
             System.out.println("SwitchUp:" + SafetySwitchUp.get() + "   Down:" + SafetySwitchDown.get() + "   Arm:"
-                    + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getYaw() + "   ChassisL:"
+                    + ArmMotor.getSelectedSensorPosition() + "   Yaw:" + AHRSSensor.getAngle() + "   ChassisL:"
                     + MotorLF.getSelectedSensorPosition() + "  Dist:" + IFDist.getVoltage());
             LifterL.set(ControlMode.PercentOutput, -stick.getRawAxis(1));
             LifterR.set(ControlMode.PercentOutput, -stick.getRawAxis(1));

@@ -180,10 +180,19 @@ public class Robot extends SampleRobot implements PIDOutput {
 
         double forward, turn, strafe; // Temporary Values of the Joystick Axis
 
-        PIDController orient_controller = new PIDController(0.02, 0, 0, AHRSSensor, this);
-        orient_controller.setAbsoluteTolerance(2);
-        orient_controller.setSetpoint(AHRSSensor.getYaw());
-        orient_controller.enable();
+        // PIDController orient_controller = new PIDController(0.02, 0, 0, AHRSSensor,
+        // this);
+        // orient_controller.setAbsoluteTolerance(2);
+        // orient_controller.setSetpoint(AHRSSensor.getYaw());
+        // orient_controller.enable();
+
+        PID_Controller orient_controller = new PID_Controller();
+        orient_controller.Kp = 0.02;
+        orient_controller.Ki = 0;
+        orient_controller.Kd = 0;
+        orient_controller.error_tolerance = 2;
+        orient_controller.target_value = AHRSSensor.getYaw();
+
         boolean user_turning = false;
         boolean use_correction = true;
 
@@ -208,17 +217,18 @@ public class Robot extends SampleRobot implements PIDOutput {
                 turn = stick.getRawAxis(4) * 0.5;
                 strafe = stick.getRawAxis(0) * 0.5;
                 // User wants to turn, set flag
-                if (Math.abs(turn) > 0.005)
+                if (Math.abs(stick.getRawAxis(4)) > 0.05)
                     user_turning = true;
                 // User wanted to turn
                 else if (user_turning) {
                     user_turning = false;
                     // Record the new orient
-                    orient_controller.setSetpoint(AHRSSensor.getYaw());
+                    orient_controller.target_value = (AHRSSensor.getYaw());
                 }
                 // User don't want to turn, control now
                 if (!user_turning && use_correction) {
-                    turn = orienter_output; // PID(See the pidWrite function)
+                    orient_controller.PIDUpdate_pos(AHRSSensor.getYaw());
+                    turn = orient_controller.result; // PID(See the pidWrite function)
                 }
                 Chas.omnimotion(forward, turn, strafe);
             }
@@ -226,15 +236,15 @@ public class Robot extends SampleRobot implements PIDOutput {
             // OneKey Movement TODO: Test Onekey
             {
                 if (pad.getRawButton(1))
-                    orient_controller.setSetpoint(0 + Math.round(AHRSSensor.getYaw() / 360.0) * 360.0);
+                    orient_controller.target_value = (0 + Math.round(AHRSSensor.getYaw() / 360.0) * 360.0);
                 if (pad.getRawButton(2))
-                    orient_controller.setSetpoint(30 + Math.round((AHRSSensor.getYaw() - 30.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (30 + Math.round((AHRSSensor.getYaw() - 30.0) / 360.0) * 360.0);
                 if (pad.getRawButton(3))
-                    orient_controller.setSetpoint(90 + Math.round((AHRSSensor.getYaw() - 90.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (90 + Math.round((AHRSSensor.getYaw() - 90.0) / 360.0) * 360.0);
                 if (pad.getRawButton(4))
-                    orient_controller.setSetpoint(150 + Math.round((AHRSSensor.getYaw() - 150.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (150 + Math.round((AHRSSensor.getYaw() - 150.0) / 360.0) * 360.0);
                 if (pad.getRawButton(5))
-                    orient_controller.setSetpoint(180 + Math.round((AHRSSensor.getYaw() - 180.0) / 360.0) * 360.0);
+                    orient_controller.target_value = (180 + Math.round((AHRSSensor.getYaw() - 180.0) / 360.0) * 360.0);
             }
 
             // Pusher
@@ -351,7 +361,6 @@ public class Robot extends SampleRobot implements PIDOutput {
             Timer.delay(0.005);
 
         }
-        orient_controller.close();
 
         stopAllMotors();
 
